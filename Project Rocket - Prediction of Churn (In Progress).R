@@ -119,7 +119,7 @@ rm(merged_data, numerical_dates, regular_dates)
 colSums(is.na(rawdata))
 rawdata$BirthDate[is.na(rawdata$BirthDate)] <- '1963-02-28'
 
-
+colSums(is.na(trainData))
 library(ggplot2)
 
 g <- ggplot(rawdata, aes(rawdata$`Marital Status`, rawdata$Dependents))
@@ -264,7 +264,7 @@ rawdataq$New_Gender <- 0
 rawdataw <- subset(rawdata, rawdata$Gender  == 'Female')
 rawdataw$New_Gender <- 1
 merged_data11 <- rbind(rawdataq,rawdataw)
-rawdata <- merged_data11[order(merged_data11$EmployeeID),]
+rawdata <- merged_data11[order(merged_data10$EmployeeID),]
 
 rm(merged_data11, rawdataq, rawdataw)
 
@@ -303,7 +303,7 @@ rawdata$New_JobRole <- unclass(as.factor(rawdata$JobRole))
 
 rawdata$New_Education <- unclass(as.factor(rawdata$Education))
 
-rawdata$New_EducationArea <- unclass(as.factor(rawdata$Education))
+rawdata$New_EducationArea <- unclass(as.factor(rawdata$EducationArea))
 
 rawdata$New_department  <- unclass(as.factor(rawdata$Department))
 
@@ -384,16 +384,16 @@ rawdata2 <- subset(rawdata, rawdata$TenureCompany>30)
 rawdata8 <- subset(rawdata, rawdata$Age>65)
 cat(18+8+13+2) # 41
 
-
+hist(rawdata$LastPromotion)
 
 rawdata10 <- subset(rawdata, rawdata$TenureCompany<=30)
 rawdata9 <- subset(rawdata10, rawdata10$Age<=65)
 #removemos os outliers em idade e tempo na empresa pois não consideramos realistas e podem ser erro de ficha
-
+hist(rawdata9$Dependents)
 summary(rawdata9$Dependents)
 summary(rawdata9$LastPromotion)
-rawdata9$Dependents <- ifelse(rawdata9$Dependents<=3, 1, rawdata9$Dependents)
-rawdata9$LastPromotion <- ifelse(rawdata9$LastPromotion<=14, 1, rawdata9$LastPromotion)
+rawdata9$Dependents <- ifelse(rawdata9$Dependents>3, 1, rawdata9$Dependents)
+rawdata9$LastPromotion <- ifelse(rawdata9$LastPromotion>14, 1, rawdata9$LastPromotion)
 #Nestes outliers, como achamos que podiam ser ainda realistas, embora bastante extremos, substituimos por mediana, para não causar muitos problemas na distribuição
 rawdata <- rawdata9
 rm(rawdata2,rawdata3,rawdata4,rawdata5,rawdata6,rawdata7,rawdata8,rawdata9,rawdata10)
@@ -402,8 +402,8 @@ rm(rawdata2,rawdata3,rawdata4,rawdata5,rawdata6,rawdata7,rawdata8,rawdata9,rawda
 log_data <- rawdata
 log_data$MonthlyIncome <-log(rawdata$MonthlyIncome)
 log_data$originalsalary <-log(rawdata$originalsalary)
-log_data$TenureCompany <- ifelse(rawdata$TenureCompany == 0, 0, log(rawdata$TenureCompany))
-log_data$LastPromotion <- ifelse(rawdata$LastPromotion == 0, 0, log(rawdata$LastPromotion))
+log_data$TenureCompany <-  (rawdata$TenureCompany-min(rawdata$TenureCompany))/(max(rawdata$TenureCompany)-min(rawdata$TenureCompany))
+log_data$LastPromotion <-  (rawdata$LastPromotion-min(rawdata$LastPromotion))/(max(rawdata$LastPromotion)-min(rawdata$LastPromotion))
 preprocesseddata2<- subset(log_data, select = -c(Age,Dependents,agetest,year_birth, AvgSatisfaction, originalsalary, AfterHours, EmployeeID, BirthDate, Gender, `Marital Status`, JobType, Department, JobRole, Education, EducationArea, Churn, New_MaritalStatus, New_JobType, New_Dependents, Generation, BalanceWork.Life))
 preprocesseddata<- subset(log_data, select = -c(Age,Dependents,agetest,year_birth, AvgSatisfaction, originalsalary, EmployeeID, BirthDate, New_Gender, `Marital Status`, JobType, New_department, New_JobRole, New_Education, New_EducationArea, NNew_MaritalStatus, NNew_JobType, NNew_Dependents, New_Generation, balancenumber, New_Afterhours, Churn))
 test <- cor(preprocesseddata2)
@@ -434,7 +434,7 @@ test2 <- ifelse(test>0.7, test, ' ')
 
 preprocesseddata <- subset(preprocesseddata, select = -c(JobLevel, TenureWorking, TenureRole, `SalaryRise(%)`, TenureManager))
 preprocesseddata2 <- subset(preprocesseddata2, select = -c(JobLevel, TenureWorking, TenureRole, `SalaryRise(%)`, TenureManager))
-preprocesseddata3 <- subset(log_data, select = c(AfterHours,JobDedication,MonthlyIncome,NumberProjectsLastYear,DistanceHomeOffice,HierarchySatisfaction,New_Churn))
+preprocesseddata3 <- subset(log_data, select = c(AfterHours,Generation,MonthlyIncome,New_MaritalStatus,TenureCompany,NumCompaniesWorked,Department,New_Churn))
 #em progresso ainda
 #########################################################################################################
 #                                            DATA REDUCTION                                             #
@@ -464,17 +464,17 @@ plot(pca_data, type = "l")
 # Third row - describe the cumulative proportion of explained variance.
 summary(pca_data)
 
-#pca with 5 components due to the first big drop in the elbow graphic
-pca5 <- pca_data$x[,1:6]
-pca5[,6] <- preprocesseddata$New_Churn
-colnames(pca5)[6] <- 'Churn'
-pca5 <- as.data.frame(pca5)
+#pca with 4 components due to the first big drop in the elbow graphic
+pca4 <- pca_data$x[,1:5]
+pca4[,5] <- preprocesseddata$New_Churn
+colnames(pca4)[5] <- 'Churn'
+pca4 <- as.data.frame(pca4)
 
-#pca with 11 components due to putting a cuttoff at 1.0 of standard deviation
-pca11 <- pca_data$x[,1:12]
-pca11[,12] <- preprocesseddata$New_Churn
-colnames(pca11)[12] <- 'Churn'
-pca11 <- as.data.frame(pca11)
+#pca with 10 components due to putting a cuttoff at 1.0 of standard deviation
+pca10 <- pca_data$x[,1:11]
+pca10[,11] <- preprocesseddata$New_Churn
+colnames(pca10)[11] <- 'Churn'
+pca10 <- as.data.frame(pca10)
 
 #pca with 20 components due to the being over 95% of the cumulative proportion
 pca20 <- pca_data$x[,1:21]
@@ -487,59 +487,61 @@ pca20 <- as.data.frame(pca20)
 set.seed(750)
 
 
-trainingRowIndex <- sample(1:nrow(preprocesseddata), 0.66*nrow(preprocesseddata))
+trainingRowIndex <- sample(1:nrow(preprocesseddata), 0.7*nrow(preprocesseddata))
 trainData <- preprocesseddata[trainingRowIndex, ]
 testData <- preprocesseddata[-trainingRowIndex, ]
 
-trainingRowIndex2 <- sample(1:nrow(preprocesseddata2), 0.66*nrow(preprocesseddata2))
+trainingRowIndex2 <- sample(1:nrow(preprocesseddata2), 0.7*nrow(preprocesseddata2))
 trainData2 <- preprocesseddata2[trainingRowIndex, ]
 testData2 <- preprocesseddata2[-trainingRowIndex, ]
 
-trainingRowIndex5 <- sample(1:nrow(pca5), 0.66*nrow(pca5))
-trainData5 <-pca5[trainingRowIndex5, ]
-testData5 <- pca5[-trainingRowIndex5, ]
+trainingRowIndex4 <- sample(1:nrow(pca4), 0.7*nrow(pca4))
+trainData4 <-pca4[trainingRowIndex4, ]
+testData4 <- pca4[-trainingRowIndex4, ]
 
-trainingRowIndex11 <- sample(1:nrow(pca11), 0.66*nrow(pca11))
-trainData11 <-pca11[trainingRowIndex11, ]
-testData11 <- pca11[-trainingRowIndex11, ]
+trainingRowIndex10 <- sample(1:nrow(pca10), 0.7*nrow(pca10))
+trainData10 <-pca10[trainingRowIndex10, ]
+testData10 <- pca10[-trainingRowIndex10, ]
 
 
-trainingRowIndex20 <- sample(1:nrow(pca20), 0.66*nrow(pca20))
+trainingRowIndex20 <- sample(1:nrow(pca20), 0.7*nrow(pca20))
 trainData20 <-pca20[trainingRowIndex20, ]
 testData20 <- pca20[-trainingRowIndex20, ]
 
-trainingRowIndextest <- sample(1:nrow(preprocesseddata3), 0.66*nrow(preprocesseddata3))
+trainingRowIndextest <- sample(1:nrow(preprocesseddata3), 0.7*nrow(preprocesseddata3))
 trainDatatest <-preprocesseddata3[trainingRowIndextest, ]
 testDatatest <- preprocesseddata3[-trainingRowIndextest, ]
 
 # Build Logistic Model
-logitmod5 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5, family = "binomial", data=trainData5)
-logitmod11 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11, family = "binomial", data=trainData11)
+logitmod4 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4, family = "binomial", data=trainData4)
+logitmod10 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10, family = "binomial", data=trainData10)
 logitmod20 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11 + PC12 + PC13 + PC14 + PC15 + PC16 + PC17 + PC18 + PC19 + PC20, family = "binomial", data=trainData20)
 logitmod <- glm(New_Churn ~ Gender + Department + JobRole + Education + EducationArea + NumCompaniesWorked + NumberProjectsLastYear + TenureCompany + LastPromotion + MonthlyIncome + DistanceHomeOffice + JobDedication + AfterHours + JobPerformance + FacilitiesSatisfaction + RoleSatisfaction + HierarchySatisfaction + BalanceWork.Life + New_MaritalStatus + New_JobType + New_Dependents + Generation, family = "binomial", data=trainData)
-test <- glm(New_Churn ~ AfterHours + JobDedication + MonthlyIncome + NumberProjectsLastYear + NumberProjectsLastYear + DistanceHomeOffice + HierarchySatisfaction, family = "binomial", data=trainDatatest)
+test <- glm(New_Churn ~ AfterHours + Generation + MonthlyIncome + New_MaritalStatus + TenureCompany + NumCompaniesWorked + Department, family = "binomial", data=trainDatatest)
 
 summary(logitmod)
 
 pred <- predict(logitmod, testData, type = "response")
-pred5 <- predict(logitmod5, testData5, type = "response")
-pred11 <- predict(logitmod11, testData11, type = "response")
+pred4 <- predict(logitmod4, testData4, type = "response")
+pred10 <- predict(logitmod10, testData10, type = "response")
 pred20 <- predict(logitmod20, testData20, type = "response")
 test_pred<- predict(test, testDatatest, type = "response")
 head(pred)
+
+#Cutoff was checked previously
 
 # Recode factors
 y_pred_num <- ifelse(pred > 0.5, 1, 0)
 y_pred <- factor(y_pred_num, levels=c(0, 1))
 y_act <- testData$New_Churn
 
-y_pred5_num <- ifelse(pred5 > 0.5, 1, 0)
-y_pred5 <- factor(y_pred5_num, levels=c(0, 1))
-y_act5 <- testData5$Churn
+y_pred4_num <- ifelse(pred4 > 0.5, 1, 0)
+y_pred4 <- factor(y_pred4_num, levels=c(0, 1))
+y_act4 <- testData4$Churn
 
-y_pred11_num <- ifelse(pred11 > 0.5, 1, 0)
-y_pred11 <- factor(y_pred11_num, levels=c(0, 1))
-y_act11 <- testData11$Churn
+y_pred10_num <- ifelse(pred10 > 0.5, 1, 0)
+y_pred10 <- factor(y_pred10_num, levels=c(0, 1))
+y_act10 <- testData10$Churn
 
 
 y_pred20_num <- ifelse(pred20 > 0.5, 1, 0)
@@ -555,10 +557,10 @@ head(y_pred)
 library(caret)
 
 caret::confusionMatrix(y_predtest, y_acttest, positive = '1')
-#This was a test to see the results of using the top variables from decision trees, it actually gives better performance than the PCA 5
+#This was a test to see the results of using the top variables from decision trees, it actually gives better performance than the PCA 4
 caret::confusionMatrix(y_pred, y_act, positive = '1')
-caret::confusionMatrix(y_pred5, y_act5, positive = '1')
-caret::confusionMatrix(y_pred11, y_act11, positive = '1')
+caret::confusionMatrix(y_pred4, y_act4, positive = '1')
+caret::confusionMatrix(y_pred10, y_act10, positive = '1')
 caret::confusionMatrix(y_pred20, y_act20, positive = '1')
 #both the one without pca and the pca with 20 perform the best, but we must be careful about overfitting
 
@@ -568,20 +570,20 @@ caret::confusionMatrix(y_pred20, y_act20, positive = '1')
 # train a naive bayes model
 install.packages('klaR')
 library(klaR)
-model5 <- NaiveBayes(factor(Churn)~. , data = pca5, fL = 1)
-model11 <- NaiveBayes(factor(Churn)~. , data = pca11, fL = 1)
-model20 <- NaiveBayes(factor(Churn)~. , data = pca20, fL = 1)
-model <- NaiveBayes(factor(New_Churn)~. , data = preprocesseddata, fL = 1)
-
+model4 <- NaiveBayes(factor(Churn)~. , data = trainData4, fL = 1)
+model10 <- NaiveBayes(factor(Churn)~. , data = trainData10, fL = 1)
+model20 <- NaiveBayes(factor(Churn)~. , data = trainData20, fL = 1)
+model <- NaiveBayes(factor(New_Churn)~. , data = trainData, fL = 1)
+modeltest <- NaiveBayes(factor(New_Churn)~. , data = trainDatatest, fL = 1)
 
 # make predictions
-x_test5 <- testData5[,1:5]
-y_test5 <- testData5[,6]
-predictions5 <- predict(model5, x_test5)
+x_test4 <- testData4[,1:4]
+y_test4 <- testData4[,5]
+predictions4 <- predict(model4, x_test4)
 
-x_test11 <- testData11[,1:11]
-y_test11 <- testData11[,12]
-predictions11 <- predict(model11, x_test11)
+x_test10 <- testData10[,1:10]
+y_test10 <- testData10[,11]
+predictions10 <- predict(model10, x_test10)
 
 x_test20 <- testData20[,1:20]
 y_test20 <- testData20[,21]
@@ -592,14 +594,19 @@ y_test <- testData[,22]
 predictions <- predict(model, x_test)
 
 
+x_testtest <- subset(testDatatest, select = -c(New_Churn))
+y_testtest <- testDatatest[,7]
+predictionstest <- predict(modeltest, x_testtest)
+
 #summarize results
-caret::confusionMatrix(predictions5$class, y_test5, positive = '1')
-caret::confusionMatrix(predictions11$class, y_test11, positive = '1')
+caret::confusionMatrix(predictions4$class, y_test4, positive = '1')
+caret::confusionMatrix(predictions10$class, y_test10, positive = '1')
 caret::confusionMatrix(predictions20$class, y_test20, positive = '1')
 caret::confusionMatrix(predictions$class, y_test, positive = '1')
-#clearly there is a performance boost from pca, which makes sense considering the naive assumption
+caret::confusionMatrix(predictionstest$class, y_testtest, positive = '1')
+#clearly there is a performance boost from pca, which makes sense considering the naive assumption, decision trees perform poorly
 
-#Decision Tress
+#Decision Trees
 #Another interesting approach is would be a classification tree due to the type of problem and the different type of variables
 install.packages('C50')
 library(C50)
@@ -613,91 +620,65 @@ library(gmodels)
 gmodels::CrossTable(testData$New_Churn, tree_pred,
                     prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
                     dnn = c('actual churn', 'predicted churn'))
-#Very interesting results predicts a lot more churn than previous models
 
 
 #forest model
 library(randomForest)
-forest_model <- randomForest(as.factor(New_Churn) ~ ., ntree = 100, data=trainData2)
+forest_model <- randomForest(as.factor(New_Churn) ~ ., ntree = 200, mtry= 8, importance=TRUE, proximity=TRUE, data=trainData2)
 print(forest_model)
 forest_pred=predict(forest_model, testData2)
 caret::confusionMatrix(forest_pred, testData2$New_Churn, positive = '1')
 
+plot(forest_model)
+t <- tuneRF(subset(trainData2, select = -c(New_Churn)), as.factor(trainData2$New_Churn), stepFactor = 0.5, plot = TRUE, ntreeTry = 200, trace = TRUE, improve = 0.05)
 
-#mlp
-library(monmlp)
-
-multiperceptron <- monmlp.fit(data.matrix(subset(trainData2, select = -c(New_Churn))),data.matrix(subset(trainData2, select = c(New_Churn))), hidden1=2)
-mlp.pred <- monmlp.predict(x = data.matrix(subset(testData2, select = -c(New_Churn))), weights = multiperceptron)
-y_predmlp_num <- ifelse(mlp.pred > 0.5, 1, 0)
-y_predmlp <- factor(y_predmlp_num, levels=c(0, 1))
-caret::confusionMatrix(y_predmlp, testData2$New_Churn, positive = '1')
-
-
-multiperceptron5 <- monmlp.fit(data.matrix(subset(trainData5, select = -c(Churn))),data.matrix(subset(trainData5, select = c(Churn))), hidden1=2)
-mlp5.pred <- monmlp.predict(x = data.matrix(subset(testData5, select = -c(Churn))), weights = multiperceptron5)
-y_predmlp5_num <- ifelse(mlp5.pred > 0.5, 1, 0)
-y_predmlp5 <- factor(y_predmlp5_num, levels=c(0, 1))
-caret::confusionMatrix(y_predmlp5, testData2$New_Churn, positive = '1')
-
-multiperceptron11 <- monmlp.fit(data.matrix(subset(trainData11, select = -c(Churn))),data.matrix(subset(trainData11, select = c(Churn))), hidden1=2)
-mlp11.pred <- monmlp.predict(x = data.matrix(subset(testData11, select = -c(Churn))), weights = multiperceptron11)
-y_predmlp11_num <- ifelse(mlp11.pred > 0.5, 1, 0)
-y_predmlp11 <- factor(y_predmlp11_num, levels=c(0, 1))
-caret::confusionMatrix(y_predmlp11, testData2$New_Churn, positive = '1')
-
-multiperceptron20 <- monmlp.fit(data.matrix(subset(trainData20, select = -c(Churn))),data.matrix(subset(trainData20, select = c(Churn))), hidden1=2)
-mlp20.pred <- monmlp.predict(x = data.matrix(subset(testData20, select = -c(Churn))), weights = multiperceptron20)
-y_predmlp20_num <- ifelse(mlp20.pred > 0.5, 1, 0)
-y_predmlp20 <- factor(y_predmlp20_num, levels=c(0, 1))
-caret::confusionMatrix(y_predmlp20, testData2$New_Churn, positive = '1')
-
+print(head(trainData.na))
 
 #KNN
 library(class)
-knn_test_pred5 <- knn(train = trainData5, test = testData5, cl = trainData5$Churn, k = 21)
-CrossTable(x = testData5$Churn, y = knn_test_pred5, prop.chisq = FALSE)
+knn_test_pred4 <- knn(train = trainData4, test = testData4, cl = trainData4$Churn, k = 16)
+CrossTable(x = testData4$Churn, y = knn_test_pred4, prop.chisq = FALSE)
 
-knn_test_pred11 <- knn(train = trainData11, test = testData11, cl = trainData11$Churn, k = 21)
-CrossTable(x = testData11$Churn, y = knn_test_pred11, prop.chisq = FALSE)
+knn_test_pred10 <- knn(train = trainData10, test = testData10, cl = trainData10$Churn, k = 16)
+CrossTable(x = testData10$Churn, y = knn_test_pred10, prop.chisq = FALSE)
 
-knn_test_pred20 <- knn(train = trainData20, test = testData20, cl = trainData20$Churn, k = 21)
+knn_test_pred20 <- knn(train = trainData20, test = testData20, cl = trainData20$Churn, k = 16)
 CrossTable(x = testData20$Churn, y = knn_test_pred20, prop.chisq = FALSE)
 #This one actually performs better the smaller the number of vsriables is
 
-knn_test_pred2 <- knn(train = trainData2, test = testData2, cl = trainData2$New_Churn, k = 21)
+knn_test_pred2 <- knn(train = trainData2, test = testData2, cl = trainData2$New_Churn, k = 16)
 CrossTable(x = testData2$New_Churn, y = knn_test_pred2, prop.chisq = FALSE)
-
 
 #NN
 
 library(neuralnet)
-trainData2[c(13)]
-nn5 <- neuralnet(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5, data=trainData5, linear.output = F, hidden = 3)
-nn11 <- neuralnet(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11, data=trainData11, linear.output = F, hidden = 3)
+
+nn4 <- neuralnet(Churn ~ PC1 + PC2 + PC3 + PC4, data=trainData4, linear.output = F, hidden = 3)
+nn10 <- neuralnet(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10, data=trainData10, linear.output = F, hidden = 3)
 nn20 <- neuralnet(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11 + PC12 + PC13 + PC14 + PC15 + PC16 + PC17 + PC18 + PC19 + PC20, data=trainData20, linear.output = F, hidden = 3)
 nn <- neuralnet(New_Churn ~ NumCompaniesWorked + NumberProjectsLastYear + TenureCompany + LastPromotion + MonthlyIncome + DistanceHomeOffice + JobDedication + JobPerformance + FacilitiesSatisfaction + RoleSatisfaction + HierarchySatisfaction + balancenumber + New_department + New_JobRole + New_Education + New_EducationArea + New_Gender + New_Afterhours + NNew_MaritalStatus + NNew_Dependents + NNew_JobType + New_Generation, data=trainData2, linear.output = F, hidden = 3)
 
+#check cutoff before
 validation.prediction=compute(nn, testData2[,-c(13)])
 y_prednn_num <- ifelse(validation.prediction$net.result > 0.5, 1, 0)
 y_prednn <- factor(y_pred_num, levels=c(0, 1))
 confusionMatrix(y_prednn, testData2$New_Churn)
 
-validation5.prediction=compute(nn5, testData5[,-c(6)])
-y_pred5nn_num <- ifelse(validation.prediction$net.result > 0.5, 1, 0)
-y_pred5nn <- factor(y_pred5_num, levels=c(0, 1))
-confusionMatrix(y_pred5nn, y_act5)
+hist(validation4.prediction$net.result)
+validation4.prediction=compute(nn4, testData4[,-c(5)])
+y_pred4nn_num <- ifelse(validation4.prediction$net.result > 0.5, 1, 0)
+y_pred4nn <- factor(y_pred4_num, levels=c(0, 1))
+confusionMatrix(y_pred4nn_num, y_act4)
 
-validation11.prediction=compute(nn11, testData11[,-c(12)])
-y_pred11nn_num <- ifelse(validation11.prediction$net.result > 0.5, 1, 0)
-y_pred11nn <- factor(y_pred11_num, levels=c(0, 1))
-confusionMatrix(y_pred11nn, y_act11)
+validation10.prediction=compute(nn10, testData10[,-c(11)])
+y_pred10nn_num <- ifelse(validation10.prediction$net.result > 0.5, 1, 0)
+confusionMatrix(y_pred10nn_num, y_act10)
 
 validation20.prediction=compute(nn20, testData20[,-c(21)])
 y_pred20nn_num <- ifelse(validation20.prediction$net.result > 0.5, 1, 0)
 y_pred20nn <- factor(y_pred20_num, levels=c(0, 1))
 confusionMatrix(y_pred20nn, y_act20)
-#PCA 11 is actually the worse performer, while the PCA 20 is the best by a slight margin
+#PCA 10 is actually the worse performer, while the PCA 20 is the best
 
 
 #################################
@@ -706,12 +687,12 @@ confusionMatrix(y_pred20nn, y_act20)
 
 
 #Logistic Regression
-#pca5
+#pca4
 # create empty accuracy table
 accT = c()
 # compute accuracy per cutoff
 for (cut in seq(0,1,0.1)){
-  cm <- confusionMatrix(ifelse(pred5>cut, 1, 0), y_act5)
+  cm <- confusionMatrix(ifelse(pred4>cut, 1, 0), y_act4)
   accT = c(accT, cm$overall[1])
 }
 
@@ -750,13 +731,13 @@ legend("topright", c("accuracy", "overall error"), lty = c(1, 2), merge = TRUE)
 
 
 
-#PCA11
+#PCA10
 
 # create empty accuracy table
 accT = c()
 # compute accuracy per cutoff
 for (cut in seq(0,1,0.1)){
-  cm <- confusionMatrix(ifelse(pred11>cut, 1, 0), y_act11)
+  cm <- confusionMatrix(ifelse(pred10>cut, 1, 0), y_act10)
   accT = c(accT, cm$overall[1])
 }
 
@@ -796,12 +777,12 @@ lines(1-accT ~ seq(0,1,0.1), type = "l", lty = 2)
 legend("topright", c("accuracy", "overall error"), lty = c(1, 2), merge = TRUE)
 
 
-#pca5
+#pca4
 # create empty accuracy table
 accT = c()
 # compute accuracy per cutoff
 for (cut in seq(0,1,0.1)){
-  cm <- confusionMatrix(ifelse(validation5.prediction$net.result>cut, 1, 0), y_act5)
+  cm <- confusionMatrix(ifelse(validation4.prediction$net.result>cut, 1, 0), y_act4)
   accT = c(accT, cm$overall[1])
 }
 
@@ -809,13 +790,13 @@ plot(accT ~ seq(0,1,0.1), xlab = "Cutoff Value", ylab = "", type = "l", ylim = c
 lines(1-accT ~ seq(0,1,0.1), type = "l", lty = 2)
 legend("topright", c("accuracy", "overall error"), lty = c(1, 2), merge = TRUE)
 
-#PCA11
+#PCA10
 
 # create empty accuracy table
 accT = c()
 # compute accuracy per cutoff
 for (cut in seq(0,1,0.1)){
-  cm <- confusionMatrix(ifelse(validation11.prediction$net.result>cut, 1, 0), y_act11)
+  cm <- confusionMatrix(ifelse(validation10.prediction$net.result>cut, 1, 0), y_act10)
   accT = c(accT, cm$overall[1])
 }
 
@@ -840,8 +821,6 @@ lines(1-accT ~ seq(0,1,0.1), type = "l", lty = 2)
 legend("topright", c("accuracy", "overall error"), lty = c(1, 2), merge = TRUE)
 
 
-
-
 #################################
 # ROC
 ################################
@@ -849,27 +828,27 @@ legend("topright", c("accuracy", "overall error"), lty = c(1, 2), merge = TRUE)
 library(pROC)
 
 
-
+#Neural Network
 #NOPCA Only numeric
-r <- roc(testData2$New_Churn, y_prednn_num)
+r <- roc(testData2$New_Churn, as.numeric(y_prednn_num))
 
 plot.roc(r)
 # compute auc
 auc(r)
 
-#PCA5
-r5 <- roc(y_act5, y_pred5nn_num)
+#PCA4
+r4 <- roc(y_act4, y_pred4nn_num)
 
-plot.roc(r5)
+plot.roc(r4)
 # compute auc
-auc(r5)
+auc(r4)
 
-#PCA11
-r11 <- roc(y_act11, y_pred11nn_num)
+#PCA10
+r10 <- roc(y_act10, y_pred10nn_num)
 
-plot.roc(r11)
+plot.roc(r10)
 # compute auc
-auc(r11)
+auc(r10)
 
 #PCA20
 r20 <- roc(y_act20, y_pred20nn_num)
@@ -897,19 +876,19 @@ plot.roc(r)
 # compute auc
 auc(r)
 
-#PCA5
-r5 <- roc(y_act5, pred5)
+#PCA4
+r4 <- roc(y_act4, pred4)
 
-plot.roc(r5)
+plot.roc(r4)
 # compute auc
-auc(r5)
+auc(r4)
 
-#PCA11
-r11 <- roc(y_act11, pred11)
+#PCA10
+r10 <- roc(y_act10, pred10)
 
-plot.roc(r11)
+plot.roc(r10)
 # compute auc
-auc(r11)
+auc(r10)
 
 #PCA20
 r20 <- roc(y_act20, pred20)
@@ -923,26 +902,26 @@ auc(r20)
 
 #KNN
 
-#NOPCA
+#NOPCA only numeric
 r <- roc(y_act, as.numeric(knn_test_pred2))
 
 plot.roc(r)
 # compute auc
 auc(r)
 
-#PCA5
-r5 <- roc(y_act5, as.numeric(knn_test_pred5))
+#PCA4
+r4 <- roc(y_act4, as.numeric(knn_test_pred4))
 
-plot.roc(r5)
+plot.roc(r4)
 # compute auc
-auc(r5)
+auc(r4)
 
-#PCA11
-r11 <- roc(y_act11, as.numeric(knn_test_pred11))
+#PCA10
+r10 <- roc(y_act10, as.numeric(knn_test_pred10))
 
-plot.roc(r11)
+plot.roc(r10)
 # compute auc
-auc(r11)
+auc(r10)
 
 #PCA20
 r20 <- roc(y_act20, as.numeric(knn_test_pred20))
@@ -961,6 +940,14 @@ plot.roc(rtree)
 # compute auc
 auc(rtree)
 
+#forest
+
+rforest <- roc(y_act, as.numeric(forest_pred))
+
+plot.roc(rforest)
+# compute auc
+auc(rforest)
+
 
 #Naive Bayes 
 
@@ -972,19 +959,19 @@ plot.roc(r)
 # compute auc
 auc(r)
 
-#PCA5
-r5 <- roc(y_act5, as.numeric(predictions5$class))
+#PCA4
+r4 <- roc(y_act4, as.numeric(predictions4$class))
 
-plot.roc(r5)
+plot.roc(r4)
 # compute auc
-auc(r5)
+auc(r4)
 
-#PCA11
-r11 <- roc(y_act11,as.numeric(predictions11$class))
+#PCA10
+r10 <- roc(y_act10,as.numeric(predictions10$class))
 
-plot.roc(r11)
+plot.roc(r10)
 # compute auc
-auc(r11)
+auc(r10)
 
 #PCA20
 r20 <- roc(y_act20, as.numeric(predictions20$class))
