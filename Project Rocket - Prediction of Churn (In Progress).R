@@ -434,8 +434,10 @@ test2 <- ifelse(test>0.7, test, ' ')
 
 preprocesseddata <- subset(preprocesseddata, select = -c(JobLevel, TenureWorking, TenureRole, `SalaryRise(%)`, TenureManager))
 preprocesseddata2 <- subset(preprocesseddata2, select = -c(JobLevel, TenureWorking, TenureRole, `SalaryRise(%)`, TenureManager))
-preprocesseddata3 <- subset(log_data, select = c(AfterHours,Generation,MonthlyIncome,New_MaritalStatus,TenureCompany,NumCompaniesWorked,Department,New_Churn))
-#em progresso ainda
+preprocesseddata3 <- subset(log_data, select = c(AfterHours,Generation,MonthlyIncome,New_MaritalStatus,TenureCompany,NumCompaniesWorked,Department,New_Churn)) #top 7, cutoff at 10%
+preprocesseddata4 <- subset(log_data, select = c(AfterHours,JobRole,New_MaritalStatus,JobDedication,FacilitiesSatisfaction,New_JobType,New_Churn)) #top 6, cutoff at variance of 15
+
+
 #########################################################################################################
 #                                            DATA REDUCTION                                             #
 #########################################################################################################
@@ -512,12 +514,20 @@ trainingRowIndextest <- sample(1:nrow(preprocesseddata3), 0.7*nrow(preprocessedd
 trainDatatest <-preprocesseddata3[trainingRowIndextest, ]
 testDatatest <- preprocesseddata3[-trainingRowIndextest, ]
 
+
+trainingRowIndexanova <- sample(1:nrow(preprocesseddata4), 0.7*nrow(preprocesseddata4))
+trainDataanova <-preprocesseddata4[trainingRowIndexanova, ]
+testDataanova <- preprocesseddata4[-trainingRowIndexanova, ]
+
+anova(logitmod, test="Chisq")
 # Build Logistic Model
 logitmod4 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4, family = "binomial", data=trainData4)
 logitmod10 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10, family = "binomial", data=trainData10)
 logitmod20 <- glm(Churn ~ PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10 + PC11 + PC12 + PC13 + PC14 + PC15 + PC16 + PC17 + PC18 + PC19 + PC20, family = "binomial", data=trainData20)
 logitmod <- glm(New_Churn ~ Gender + Department + JobRole + Education + EducationArea + NumCompaniesWorked + NumberProjectsLastYear + TenureCompany + LastPromotion + MonthlyIncome + DistanceHomeOffice + JobDedication + AfterHours + JobPerformance + FacilitiesSatisfaction + RoleSatisfaction + HierarchySatisfaction + BalanceWork.Life + New_MaritalStatus + New_JobType + New_Dependents + Generation, family = "binomial", data=trainData)
 test <- glm(New_Churn ~ AfterHours + Generation + MonthlyIncome + New_MaritalStatus + TenureCompany + NumCompaniesWorked + Department, family = "binomial", data=trainDatatest)
+anova <- glm(New_Churn ~ AfterHours + JobRole + New_MaritalStatus + JobDedication + FacilitiesSatisfaction + New_JobType, family = "binomial", data=trainDataanova)
+
 
 summary(logitmod)
 
@@ -526,6 +536,7 @@ pred4 <- predict(logitmod4, testData4, type = "response")
 pred10 <- predict(logitmod10, testData10, type = "response")
 pred20 <- predict(logitmod20, testData20, type = "response")
 test_pred<- predict(test, testDatatest, type = "response")
+anova_pred<- predict(anova, testDataanova, type = "response")
 head(pred)
 
 #Cutoff was checked previously
@@ -552,12 +563,17 @@ y_predtest_num <- ifelse(test_pred > 0.5, 1, 0)
 y_predtest <- factor(y_predtest_num, levels=c(0, 1))
 y_acttest <- testDatatest$New_Churn
 
+y_predanova_num <- ifelse(anova_pred > 0.5, 1, 0)
+y_predanova <- factor(y_predanova_num, levels=c(0, 1))
+y_actanova <- testDataanova$New_Churn
+
 head(y_pred)
 
 library(caret)
 
 caret::confusionMatrix(y_predtest, y_acttest, positive = '1')
 #This was a test to see the results of using the top variables from decision trees, it actually gives better performance than the PCA 4
+caret::confusionMatrix(y_predanova, y_actanova, positive = '1')
 caret::confusionMatrix(y_pred, y_act, positive = '1')
 caret::confusionMatrix(y_pred4, y_act4, positive = '1')
 caret::confusionMatrix(y_pred10, y_act10, positive = '1')
@@ -575,6 +591,7 @@ model10 <- NaiveBayes(factor(Churn)~. , data = trainData10, fL = 1)
 model20 <- NaiveBayes(factor(Churn)~. , data = trainData20, fL = 1)
 model <- NaiveBayes(factor(New_Churn)~. , data = trainData, fL = 1)
 modeltest <- NaiveBayes(factor(New_Churn)~. , data = trainDatatest, fL = 1)
+modelanova <- NaiveBayes(factor(New_Churn)~. , data = trainDataanova, fL = 1)
 
 # make predictions
 x_test4 <- testData4[,1:4]
@@ -593,9 +610,12 @@ x_test <- subset(testData, select = -c(New_Churn))
 y_test <- testData[,22]
 predictions <- predict(model, x_test)
 
+x_testanova <- subset(testDataanova, select = -c(New_Churn))
+y_testanova <- testDataanova[,7]
+predictionsanova <- predict(modelanova, x_testanova)
 
 x_testtest <- subset(testDatatest, select = -c(New_Churn))
-y_testtest <- testDatatest[,7]
+y_testtest <- testDatatest[,8]
 predictionstest <- predict(modeltest, x_testtest)
 
 #summarize results
@@ -604,6 +624,8 @@ caret::confusionMatrix(predictions10$class, y_test10, positive = '1')
 caret::confusionMatrix(predictions20$class, y_test20, positive = '1')
 caret::confusionMatrix(predictions$class, y_test, positive = '1')
 caret::confusionMatrix(predictionstest$class, y_testtest, positive = '1')
+caret::confusionMatrix(predictionsanova$class, y_testanova, positive = '1')
+
 #clearly there is a performance boost from pca, which makes sense considering the naive assumption, decision trees perform poorly
 
 #Decision Trees
@@ -728,6 +750,18 @@ plot(accT ~ seq(0,1,0.1), xlab = "Cutoff Value", ylab = "", type = "l", ylim = c
 lines(1-accT ~ seq(0,1,0.1), type = "l", lty = 2)
 legend("topright", c("accuracy", "overall error"), lty = c(1, 2), merge = TRUE)
 
+#ANOVA variables
+# create empty accuracy table
+accT = c()
+# compute accuracy per cutoff
+for (cut in seq(0,1,0.1)){
+  cm <- confusionMatrix(ifelse(anova_pred>cut, 1, 0), y_acttest)
+  accT = c(accT, cm$overall[1])
+}
+
+plot(accT ~ seq(0,1,0.1), xlab = "Cutoff Value", ylab = "", type = "l", ylim = c(0, 1))
+lines(1-accT ~ seq(0,1,0.1), type = "l", lty = 2)
+legend("topright", c("accuracy", "overall error"), lty = c(1, 2), merge = TRUE)
 
 
 
@@ -868,6 +902,13 @@ plot.roc(r)
 # compute auc
 auc(r)
 
+#ANOVA Columns
+
+r <- roc(y_actanova, predanova)
+
+plot.roc(r)
+# compute auc
+auc(r)
 
 #NOPCA
 r <- roc(y_act, pred)
@@ -951,8 +992,24 @@ auc(rforest)
 
 #Naive Bayes 
 
-#NOPCA only numeric
+#NOPCA
 r <- roc(y_act, as.numeric(predictions$class))
+
+
+plot.roc(r)
+# compute auc
+auc(r)
+
+#Decision Tree Variables
+r <- roc(y_act, as.numeric(predictionstest$class))
+
+
+plot.roc(r)
+# compute auc
+auc(r)
+
+#ANOVA Variables
+r <- roc(y_act, as.numeric(predictionsanova$class))
 
 
 plot.roc(r)
